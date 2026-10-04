@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Elite Company Group — Membership</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     ============================================================ */
+  :root{
+    --bg:            #05080d;
+    --panel:         #0b1017;
+    --panel-2:       #0f1620;
+    --bot-bubble:    #151d27;
+    --user-bubble:   linear-gradient(135deg, #1ea55c, #14874a);
+    --line:          rgba(255,255,255,.09);
+    --line-strong:   rgba(255,255,255,.16);
+    --text:          #e9eff7;
+    --muted:         #8ba0b6;
+    --gold:          #f5b301;
+    --gold-soft:     rgba(245,179,1,.14);
+    --green:         #22c55e;
+    --green-soft:    rgba(34,197,94,.14);
+    --danger:        #f87171;
+    --radius:        18px;
+    --font:          "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family:var(--font);
+    color:var(--text);
+    background:
+      radial-gradient(900px 600px at 12% -5%, rgba(245,179,1,.10), transparent 60%),
+      radial-gradient(900px 700px at 92% 105%, rgba(34,197,94,.12), transparent 60%),
+      var(--bg);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100dvh;
+    padding:16px;
+    overflow:hidden;
+  }
+
+  /* ============================================================
+     SHELL
+     ============================================================ */
+  .app{
+    width:min(480px, 100%);
+    height:min(880px, calc(100dvh - 32px));
+    display:flex;
+    flex-direction:column;
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line);
+    border-radius:26px;
+    overflow:hidden;
+    box-shadow:
+      0 40px 90px -30px rgba(0,0,0,.9),
+      0 0 0 1px rgba(255,255,255,.03) inset;
+    position:relative;
+    z-index:2;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 16px;
+    background:rgba(10,16,24,.72);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+    border-bottom:1px solid var(--line);
+    flex-shrink:0;
+  }
+  .avatar{
+    width:44px; height:44px;
+    border-radius:50%;
+    display:grid; place-items:center;
+    font-weight:800; font-size:15px; letter-spacing:.5px;
+    color:#06120b;
+    background:linear-gradient(140deg, var(--gold), #ffd76a 45%, var(--green));
+    box-shadow:0 0 0 2px rgba(245,179,1,.22), 0 6px 18px -6px rgba(245,179,1,.6);
+    flex-shrink:0;
+  }
+  .who{ flex:1; min-width:0; }
+  .who h1{
+    margin:0;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:.2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .status{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11.5px; color:var(--green); margin-top:2px;
+  }
+  .status::before{
+    content:"";
+    width:6px; height:6px; border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 0 0 rgba(34,197,94,.7);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(34,197,94,.6); }
+    70%{ box-shadow:0 0 0 7px rgba(34,197,94,0); }
+    100%{ box-shadow:0 0 0 0 rgba(34,197,94,0); }
+  }
+  .icon-btn{
+    width:36px; height:36px;
+    border-radius:11px;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.03);
+    color:var(--muted);
+    cursor:pointer;
+    display:grid; place-items:center;
+    font-size:15px;
+    transition:.18s ease;
+    flex-shrink:0;
+  }
+  .icon-btn:hover{ color:var(--text); border-color:var(--line-strong); background:rgba(255,255,255,.07); transform:translateY(-1px); }
+  .icon-btn:active{ transform:scale(.94); }
+
+  /* ---------- Chat area ---------- */
+  .chat{
+    flex:1;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding:18px 16px 8px;
+    display:flex;
+    flex-direction:column;
+    gap:11px;
+    scroll-behavior:smooth;
+    overscroll-behavior:contain;
+  }
+  .chat::-webkit-scrollbar{ width:6px; }
+  .chat::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.10); border-radius:99px; }
+  .chat::-webkit-scrollbar-track{ background:transparent; }
+
+  .msg{
+    display:flex;
+    animation:rise .32s cubic-bezier(.22,1,.36,1) both;
+  }
+  .msg.bot{ justify-content:flex-start; }
+  .msg.user{ justify-content:flex-end; }
+  @keyframes rise{
+    from{ opacity:0; transform:translateY(10px) scale(.98); }
+    to{ opacity:1; transform:none; }
+  }
+
+  .bubble{
+    max-width:84%;
+    padding:11px 14px;
+    border-radius:16px;
+    font-size:14.2px;
+    line-height:1.58;
+    word-wrap:break-word;
+    overflow-wrap:anywhere;
+  }
+  .msg.bot .bubble{
+    background:var(--bot-bubble);
+    border:1px solid var(--line);
+    border-bottom-left-radius:6px;
+    color:#dbe6f2;
+  }
+  .msg.user .bubble{
+    background:var(--user-bubble);
+    color:#fff;
+    border-bottom-right-radius:6px;
+    box-shadow:0 8px 22px -12px rgba(34,197,94,.9);
+  }
+  .bubble b{ color:#fff; font-weight:700; }
+
+  /* typing indicator */
+  .typing .bubble{
+    display:flex; gap:5px; align-items:center;
+    padding:14px 16px;
+  }
+  .typing .bubble span{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--muted);
+    animation:blink 1.3s infinite ease-in-out;
+  }
+  .typing .bubble span:nth-child(2){ animation-delay:.18s; }
+  .typing .bubble span:nth-child(3){ animation-delay:.36s; }
+  @keyframes blink{
+    0%,60%,100%{ opacity:.28; transform:translateY(0); }
+    30%{ opacity:1; transform:translateY(-3px); }
+  }
+
+  /* ---------- Plan cards ---------- */
+  .plans-bubble{
+    max-width:100% !important;
+    width:100%;
+    padding:12px !important;
+  }
+  .plans{ display:flex; flex-direction:column; gap:10px; }
+  .plan{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:14px 15px;
+    border-radius:15px;
+    border:1px solid var(--line);
+    background:linear-gradient(150deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+    color:var(--text);
+    font-family:inherit;
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition:.22s cubic-bezier(.22,1,.36,1);
+  }
+  .plan::after{
+    content:"";
+    position:absolute; inset:0;
+    background:radial-gradient(300px 120px at 0% 0%, var(--accent-soft, rgba(245,179,1,.16)), transparent 70%);
+    opacity:0; transition:.25s;
+  }
+  .plan:hover:not(.disabled){
+    transform:translateY(-2px);
+    border-color:var(--accent, var(--gold));
+    box-shadow:0 14px 34px -20px var(--accent, var(--gold));
+  }
+  .plan:hover:not(.disabled)::after{ opacity:1; }
+  .plan:active:not(.disabled){ transform:scale(.985); }
+  .plan.disabled{ opacity:.42; cursor:not-allowed; filter:saturate(.4); }
+  .plan.selected{
+    border-color:var(--accent, var(--gold));
+    box-shadow:0 0 0 1px var(--accent, var(--gold)) inset, 0 16px 40px -24px var(--accent, var(--gold));
+    opacity:1; filter:none;
+  }
+  .plan-head{
+    display:flex; align-items:center; gap:9px;
+    font-weight:750; font-size:14.5px; margin-bottom:9px;
+    position:relative; z-index:1;
+  }
+  .plan-emoji{ font-size:16px; }
+  .plan-list{
+    list-style:none; margin:0; padding:0;
+    display:flex; flex-direction:column; gap:6px;
+    font-size:13px; color:var(--muted);
+    position:relative; z-index:1;
+  }
+  .plan-list li{ display:flex; align-items:center; gap:8px; }
+  .plan-list li::before{
+    content:"";
+    width:5px; height:5px; border-radius:50%;
+    background:var(--accent, var(--gold));
+    flex-shrink:0;
+  }
+  .plan-list li b{ color:#fff; font-weight:650; }
+  .plan-cta{
+    display:inline-block;
+    margin-top:11px;
+    font-size:12px; font-weight:700; letter-spacing:.4px;
+    color:var(--accent, var(--gold));
+    position:relative; z-index:1;
+  }
+
+  /* ---------- Payment card ---------- */
+  .pay-bubble{
+    max-width:100% !important;
+    width:100%;
+    padding:0 !important;
+    overflow:hidden;
+  }
+  .pay-head{
+    padding:12px 16px;
+    background:linear-gradient(120deg, rgba(245,179,1,.16), rgba(34,197,94,.12));
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:12.5px; font-weight:700; letter-spacing:.4px;
+    color:var(--gold);
+  }
+  .pay-body{ padding:6px 16px 14px; }
+
+  /* Payment method blocks */
+  .pay-method{
+    margin-top:12px;
+    padding:12px 0 4px;
+    border-bottom:1px dashed rgba(255,255,255,.07);
+  }
+  .pay-method:last-child{ border-bottom:none; }
+  .pay-method-title{
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; font-weight:700;
+    color:var(--gold);
+    margin-bottom:8px;
+  }
+  .pay-method-title .icon{ font-size:15px; }
+  .pay-method-steps{
+    list-style:none; margin:0; padding:0;
+    display:flex; flex-direction:column; gap:6px;
+    font-size:13px; color:var(--muted);
+  }
+  .pay-method-steps li{
+    display:flex; align-items:flex-start; gap:8px;
+    line-height:1.45;
+  }
+  .pay-method-steps li::before{
+    content:"•";
+    color:var(--gold);
+    font-weight:800;
+    flex-shrink:0;
+    width:14px;
+    text-align:center;
+  }
+  .pay-method-steps li b{ color:#fff; font-weight:650; }
+  .pay-method-number{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px;
+    padding:8px 10px;
+    background:rgba(255,255,255,.035);
+    border-radius:10px;
+    border:1px solid var(--line);
+    margin:6px 0 2px;
+    font-size:13.5px;
+    font-weight:700;
+    color:#fff;
+  }
+  .pay-method-number .copy{
+    margin-left:auto;
+  }
+
+  .pay-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px;
+    padding:11px 0;
+    border-bottom:1px dashed rgba(255,255,255,.07);
+    font-size:13.4px;
+  }
+  .pay-row:last-child{ border-bottom:none; }
+  .pay-row .k{ color:var(--muted); flex-shrink:0; }
+  .pay-row .v{
+    font-weight:700; color:#fff;
+    display:flex; align-items:center; gap:8px;
+    text-align:right;
+    min-width:0;
+  }
+  .pay-row .v span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .copy{
+    border:1px solid var(--line-strong);
+    background:rgba(255,255,255,.05);
+    color:var(--muted);
+    font-family:inherit;
+    font-size:10.5px; font-weight:700; letter-spacing:.5px;
+    padding:4px 8px;
+    border-radius:7px;
+    cursor:pointer;
+    transition:.16s;
+    flex-shrink:0;
+  }
+  .copy:hover{ color:var(--gold); border-color:var(--gold); background:var(--gold-soft); }
+  .copy:active{ transform:scale(.93); }
+
+  .pay-total{
+    margin-top:12px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:linear-gradient(120deg, rgba(245,179,1,.13), rgba(245,179,1,.04));
+    border:1px solid rgba(245,179,1,.28);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .pay-total .label{ font-size:11.5px; letter-spacing:.7px; color:var(--muted); font-weight:700; }
+  .pay-total .amount{ font-size:20px; font-weight:800; color:var(--gold); letter-spacing:-.3px; }
+
+  /* ---------- Badge image ---------- */
+  .badge-img{
+    max-width:100%;
+    width:100%;
+    border-radius:16px;
+    border:1px solid var(--line);
+    display:block;
+    box-shadow:0 26px 60px -30px rgba(0,0,0,.95);
+    animation:rise .5s cubic-bezier(.22,1,.36,1) both;
+  }
+
+  /* ---------- Composer ---------- */
+  .composer{
+    flex-shrink:0;
+    padding:12px 14px 16px;
+    background:rgba(10,16,24,.82);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+    border-top:1px solid var(--line);
+    min-height:66px;
+    display:flex;
+    align-items:center;
+  }
+  .quick-row, .input-row{
+    display:flex; gap:8px; width:100%; flex-wrap:wrap;
+    animation:rise .28s ease both;
+  }
+  .qr{
+    flex:1 1 auto;
+    min-width:calc(50% - 4px);
+    padding:12px 14px;
+    border-radius:13px;
+    border:1px solid var(--line-strong);
+    background:rgba(255,255,255,.035);
+    color:var(--text);
+    font-family:inherit;
+    font-size:13px;
+    font-weight:650;
+    cursor:pointer;
+    transition:.18s cubic-bezier(.22,1,.36,1);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .qr:hover{
+    border-color:var(--gold);
+    background:var(--gold-soft);
+    color:#ffd76a;
+    transform:translateY(-2px);
+  }
+  .qr:active{ transform:scale(.97); }
+  .qr.primary{
+    background:linear-gradient(135deg, rgba(245,179,1,.2), rgba(34,197,94,.16));
+    border-color:rgba(245,179,1,.45);
+    color:#ffd76a;
+  }
+
+  .input-row input{
+    flex:1;
+    min-width:0;
+    padding:13px 15px;
+    border-radius:13px;
+    border:1px solid var(--line-strong);
+    background:rgba(255,255,255,.04);
+    color:var(--text);
+    font-family:inherit;
+    font-size:14px;
+    outline:none;
+    transition:.2s;
+  }
+  .input-row input::placeholder{ color:#5f7288; }
+  .input-row input:focus{
+    border-color:var(--gold);
+    background:rgba(245,179,1,.06);
+    box-shadow:0 0 0 3px rgba(245,179,1,.12);
+  }
+  .input-row .send{
+    padding:0 20px;
+    border-radius:13px;
+    border:none;
+    background:linear-gradient(135deg, var(--gold), #ffcf4d);
+    color:#1a1204;
+    font-family:inherit;
+    font-weight:800;
+    font-size:13.5px;
+    cursor:pointer;
+    transition:.18s;
+    flex-shrink:0;
+  }
+  .input-row .send:hover{ filter:brightness(1.08); transform:translateY(-1px); }
+  .input-row .send:active{ transform:scale(.96); }
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:34px;
+    transform:translate(-50%, 24px);
+    background:rgba(16,24,34,.96);
+    border:1px solid var(--line-strong);
+    color:var(--text);
+    padding:11px 20px;
+    border-radius:99px;
+    font-size:13px;
+    font-weight:600;
+    opacity:0;
+    pointer-events:none;
+    transition:.3s cubic-bezier(.22,1,.36,1);
+    z-index:10000;
+    box-shadow:0 18px 40px -18px rgba(0,0,0,.9);
+    backdrop-filter:blur(12px);
+  }
+  .toast.show{ opacity:1; transform:translate(-50%, 0); }
+
+  /* ---------- Confetti ---------- */
+  #confetti{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:9999;
+  }
+
+  @media (max-width:420px){
+    body{ padding:0; }
+    .app{ height:100dvh; border-radius:0; border:none; width:100%; }
+    .bubble{ font-size:13.8px; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="app">
+    <!-- ================= TOP BAR ================= -->
+    <header class="topbar">
+      <div class="avatar">EC</div>
+      <div class="who">
+        <h1>Elite Company Group</h1>
+        <span class="status">online • verified agent</span>
+      </div>
+      <button class="icon-btn" id="resetBtn" title="Restart conversation" aria-label="Restart">⟳</button>
+    </header>
+
+    <!-- ================= CHAT ================= -->
+    <main class="chat" id="chat" role="log" aria-live="polite"></main>
+
+    <!-- ================= COMPOSER ================= -->
+    <footer class="composer">
+      <div id="composerBar" style="width:100%"></div>
+    </footer>
+  </div>
+
+  <canvas id="confetti"></canvas>
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ================================================================
+   1. CONFIGURATION  —  edit everything about your business here
+   ================================================================ */
+const CONFIG = {
+  userName   : "Henry Orijabo Orijabo",
+  brand      : "Elite Company Group",
+  duration   : "2 months",
+  currency   : "UGX",
+  whatsapp   : "https://chat.whatsapp.com/",     // ← your group invite link
+
+  plans: {
+    correct: {
+      id       : "correct",
+      emoji    : "1️⃣",
+      title    : "Correct Score Odds",
+      odds     : "56+ odds and above",
+      price    : 50000,
+      accent   : "#f5b301",
+      accentSoft:"rgba(245,179,1,.18)",
+      tagline  : "High-risk, high-reward"
+    },
+    normal: {
+      id       : "normal",
+      emoji    : "2️⃣",
+      title    : "Normal Odds",
+      odds     : "Around 20+ odds",
+      price    : 35000,
+      accent   : "#22c55e",
+      accentSoft:"rgba(34,197,94,.18)",
+      tagline  : "Balanced & consistent"
+    }
+  },
+
+  /* ---- PAYMENT METHODS ---- */
+  paymentMethods: [
+    {
+      id: 'mtn_to_mpesa',
+      title: 'UGANDA MTN → M-PESA KENYA',
+      icon: '📱',
+      steps: [
+        'Dial *165#',
+        'Send money',
+        'Africa countries',
+        'East Africa',
+        'Kenya',
+        'Safaricom mpesa',
+        'Number: 254702375172',
+        'Amount',
+        'Pin and send'
+      ],
+      name: 'BRIAN KIMUTAI',
+      copyNumber: '254702375172'
+    },
+    {
+      id: 'mtn_uganda',
+      title: 'MTN MoMo (Uganda)',
+      icon: '📲',
+      number: '+256 700 000 000',
+      name: 'Elite Company Group'
+    },
+    {
+      id: 'airtel_uganda',
+      title: 'Airtel Money (Uganda)',
+      icon: '📞',
+      number: '+256 750 000 000',
+      name: 'Elite Company Group'
+    }
+  ]
+};
+
+/* ================================================================
+   2. UTILITIES
+   ================================================================ */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" }[c]));
+const money = n => n.toLocaleString("en-UG") + " " + CONFIG.currency;
+const fmtDate = d => d.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
+
+/* ================================================================
+   3. DOM REFS + STATE
+   ================================================================ */
+const chat        = $("#chat");
+const composerBar = $("#composerBar");
+const toastEl     = $("#toast");
+
+const state = {
+  plan     : null,
+  ref      : null,
+  txid     : null,
+  memberId : null,
+  locked   : false
+};
+
+const scrollDown = () => { chat.scrollTop = chat.scrollHeight; };
+
+function toast(msg, ms = 1900){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toastEl.classList.remove("show"), ms);
+}
+
+/* ================================================================
+   4. MESSAGE PRIMITIVES
+   ================================================================ */
+function addBubble(html, who = "bot"){
+  const wrap = document.createElement("div");
+  wrap.className = `msg ${who}`;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.innerHTML = html;
+  wrap.appendChild(bubble);
+  chat.appendChild(wrap);
+  scrollDown();
+  return bubble;
+}
+
+function addNode(node, who = "bot"){
+  const wrap = document.createElement("div");
+  wrap.className = `msg ${who}`;
+  wrap.appendChild(node);
+  chat.appendChild(wrap);
+  scrollDown();
+  return wrap;
+}
+
+function showTyping(){
+  const wrap = document.createElement("div");
+  wrap.className = "msg bot typing";
+  wrap.innerHTML = `<div class="bubble"><span></span><span></span><span></span></div>`;
+  chat.appendChild(wrap);
+  scrollDown();
+  return wrap;
+}
+
+/** Typewriter effect that respects HTML escaping + newlines. */
+async function typeInto(el, text, speed = 15){
+  const total = text.length;
+  const step  = total > 200 ? 3 : total > 90 ? 2 : 1;
+  for (let i = step; i <= total; i += step){
+    el.innerHTML = esc(text.slice(0, i)).replace(/\n/g, "<br>");
+    scrollDown();
+    await sleep(speed);
+  }
+  el.innerHTML = esc(text).replace(/\n/g, "<br>");
+  scrollDown();
+}
+
+/** Show a typing indicator, then type out the message. */
+async function botSay(text, { delay = 320, speed = 15 } = {}){
+  const t = showTyping();
+  await sleep(delay);
+  t.remove();
+  const bubble = addBubble("", "bot");
+  await typeInto(bubble, text, speed);
+}
+
+/* ================================================================
+   5. COMPOSER RENDERERS
+   ================================================================ */
+function renderQuick(items){
+  composerBar.innerHTML = "";
+  const row = document.createElement("div");
+  row.className = "quick-row";
+  items.forEach(it => {
+    const b = document.createElement("button");
+    b.className = "qr" + (it.primary ? " primary" : "");
+    b.innerHTML = it.label;
+    b.addEventListener("click", async () => {
+      if (b.dataset.busy) return;
+      b.dataset.busy = "1";
+      $$(".qr", composerBar).forEach(x => x.dataset.busy = "1");
+      await it.onClick();
+    });
+    row.appendChild(b);
+  });
+  composerBar.appendChild(row);
+}
+
+function renderInput({ placeholder = "Type…", button = "Send", onSubmit }){
+  composerBar.innerHTML = "";
+  const row = document.createElement("div");
+  row.className = "input-row";
+  row.innerHTML = `<input type="text" autocomplete="off" spellcheck="false" placeholder="${esc(placeholder)}" />
+                   <button class="send">${esc(button)}</button>`;
+  const input = $("input", row);
+  const btn   = $("button", row);
+
+  const submit = () => {
+    const v = input.value.trim();
+    if (!v){ input.focus(); return; }
+    input.disabled = true; btn.disabled = true;
+    onSubmit(v);
+  };
+  btn.addEventListener("click", submit);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+
+  composerBar.appendChild(row);
+  setTimeout(() => input.focus(), 80);
+}
+
+const renderNone = () => { composerBar.innerHTML = ""; };
+
+/* ================================================================
+   6. PLAN CARDS
+   ================================================================ */
+function planCardHTML(p){
+  return `
+    <button class="plan" data-plan="${p.id}"
+            style="--accent:${p.accent}; --accent-soft:${p.accentSoft}">
+      <div class="plan-head">
+        <span class="plan-emoji">${p.emoji}</span>
+        <span>${esc(p.title)}</span>
+      </div>
+      <ul class="plan-list">
+        <li>${esc(p.odds)}</li>
+        <li>Membership: <b>${money(p.price)}</b></li>
+        <li>${esc(p.tagline)}</li>
+      </ul>
+      <span class="plan-cta">CHOOSE THIS PLAN →</span>
+    </button>`;
+}
+
+async function showPlans(){
+  const node = document.createElement("div");
+  node.className = "bubble plans-bubble";
+  node.innerHTML = `<div class="plans">${Object.values(CONFIG.plans).map(planCardHTML).join("")}</div>`;
+  addNode(node, "bot");
+
+  $$(".plan", node).forEach(btn =>
+    btn.addEventListener("click", () => choosePlan(btn.dataset.plan))
+  );
+
+  renderQuick(Object.values(CONFIG.plans).map(p => ({
+    label : `${p.emoji} ${esc(p.title)}`,
+    onClick: () => choosePlan(p.id)
+  })));
+}
+
+/* ================================================================
+   7. FLOW — STEP 1: choose a plan
+   ================================================================ */
+async function choosePlan(id){
+  if (state.locked || state.plan) return;
+  state.locked = true;
+
+  state.plan = id;
+  const p = CONFIG.plans[id];
+
+  // lock down the UI
+  $$(".plan").forEach(b => {
+    b.classList.add("disabled");
+    if (b.dataset.plan === id) b.classList.add("selected");
+  });
+  renderNone();
+
+  addBubble(`${p.emoji} ${esc(p.title)}`, "user");
+
+  await botSay(
+    `Great choice! ✅\n\n` +
+    `Plan: ${p.title}\n` +
+    `Odds category: ${p.odds}\n` +
+    `Membership: ${money(p.price)}\n` +
+    `Duration: ${CONFIG.duration}`,
+    { speed: 12 }
+  );
+
+  await botSay(`Please complete the membership payment using the details below 👇`, { speed: 14 });
+
+  showPaymentCard(p);
+
+  await sleep(600);
+  renderQuick([
+    { label: "✅ I have paid", primary: true, onClick: askForTxId },
+    { label: "🔁 Change plan",              onClick: resetFlow }
+  ]);
+  state.locked = false;
+}
+
+/* ================================================================
+   8. FLOW — STEP 2: payment card
+   ================================================================ */
+function showPaymentCard(p){
+  state.ref = "ECG-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+  const node = document.createElement("div");
+  node.className = "bubble pay-bubble";
+
+  /* ---- build payment methods HTML ---- */
+  let methodsHTML = '';
+  CONFIG.paymentMethods.forEach(m => {
+    methodsHTML += `<div class="pay-method">`;
+    methodsHTML += `<div class="pay-method-title"><span class="icon">${m.icon}</span> ${esc(m.title)}</div>`;
+
+    if (m.steps) {
+      // steps list
+      methodsHTML += `<ul class="pay-method-steps">`;
+      m.steps.forEach(s => {
+        methodsHTML += `<li>${esc(s)}</li>`;
+      });
+      methodsHTML += `</ul>`;
+      if (m.name) {
+        methodsHTML += `<div style="margin-top:8px;font-size:13px;color:var(--muted);">NAME: <b style="color:#fff;">${esc(m.name)}</b></div>`;
+      }
+      if (m.copyNumber) {
+        methodsHTML += `<div class="pay-method-number">
+          <span>${esc(m.copyNumber)}</span>
+          <button class="copy" data-copy="${esc(m.copyNumber)}">COPY</button>
+        </div>`;
+      }
+    } else {
+      // simple number method
+      methodsHTML += `<div class="pay-method-number">
+        <span>${esc(m.number)}</span>
+        <button class="copy" data-copy="${esc(m.number)}">COPY</button>
+      </div>`;
+      if (m.name) {
+        methodsHTML += `<div style="margin-top:4px;font-size:13px;color:var(--muted);">NAME: <b style="color:#fff;">${esc(m.name)}</b></div>`;
+      }
+    }
+    methodsHTML += `</div>`;
+  });
+
+  node.innerHTML = `
+    <div class="pay-head">
+      <span>💳 MEMBERSHIP PAYMENT</span>
+      <span>REF ${state.ref}</span>
+    </div>
+    <div class="pay-body">
+      ${methodsHTML}
+      <div class="pay-row" style="margin-top:8px;">
+        <span class="k">Reference</span>
+        <span class="v"><span>${state.ref}</span>
+          <button class="copy" data-copy="${state.ref}">COPY</button></span>
+      </div>
+      <div class="pay-total">
+        <span class="label">TOTAL TO PAY</span>
+        <span class="amount">${money(p.price)}</span>
+      </div>
+    </div>`;
+  addNode(node, "bot");
+}
+
+/* Delegated copy handler */
+chat.addEventListener("click", async e => {
+  const btn = e.target.closest(".copy");
+  if (!btn) return;
+  const text = btn.dataset.copy;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); ta.remove();
+  }
+  const original = btn.textContent;
+  btn.textContent = "COPIED ✓";
+  toast("Copied to clipboard");
+  setTimeout(() => (btn.textContent = original), 1400);
+});
+
+/* ================================================================
+   9. FLOW — STEP 3: transaction ID + verification
+   ================================================================ */
+async function askForTxId(){
+  renderNone();
+  await botSay(
+    `Perfect 🙌\n\nNow send me your payment transaction ID (the confirmation code you received from MTN/Airtel) so I can verify it.`,
+    { speed: 12 }
+  );
+  renderInput({
+    placeholder : "e.g. MP240812.1432.A56789",
+    button      : "Verify",
+    onSubmit    : verifyTx
+  });
+}
+
+async function verifyTx(value){
+  state.txid = value;
+  renderNone();
+  addBubble(esc(value), "user");
+
+  const t = showTyping();
+  await sleep(1100);
+  t.remove();
+
+  await botSay(`🔎 Verifying transaction ${value}…`, { speed: 22 });
+  await sleep(500);
+
+  const t2 = showTyping();
+  await sleep(900);
+  t2.remove();
+
+  await activateMembership();
+}
+
+/* ================================================================
+   10. FLOW — STEP 4: activate + badge
+   ================================================================ */
+async function activateMembership(){
+  const p = CONFIG.plans[state.plan];
+
+  state.memberId = `ECG-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const validUntil = new Date();
+  validUntil.setMonth(validUntil.getMonth() + 2);
+
+  await botSay(
+    `✅ Payment confirmed!\n\n` +
+    `🎉 Congratulations ${CONFIG.userName}! Your ${p.title} membership is now ACTIVE.\n\n` +
+    `Member ID: ${state.memberId}\n` +
+    `Valid until: ${fmtDate(validUntil)}`,
+    { speed: 11 }
+  );
+
+  await botSay(`Here is your official membership badge 👇`, { speed: 16 });
+
+  const badgeURL = drawBadge({
+    name       : CONFIG.userName,
+    planTitle  : p.title,
+    odds       : p.odds,
+    memberId   : state.memberId,
+    validUntil : fmtDate(validUntil)
+  });
+
+  const img = document.createElement("img");
+  img.className = "badge-img";
+  img.alt = "Membership badge";
+  img.src = badgeURL;
+  addNode(img, "bot");
+
+  fireConfetti();
+
+  await sleep(700);
+  await botSay(
+    `You've been added to the ${p.title} WhatsApp group ✅\n\n` +
+    `You will receive your ${p.odds} selections every day for the next ${CONFIG.duration}.\n\n` +
+    `Good luck! 🍀`,
+    { speed: 12 }
+  );
+
+  renderQuick([
+    { label: "📥 Download badge", primary: true, onClick: () => downloadImage(badgeURL) },
+    { label: "💬 Open WhatsApp group",            onClick: () => window.open(CONFIG.whatsapp, "_blank") },
+    { label: "🔄 Start over",                     onClick: resetFlow }
+  ]);
+}
+
+function downloadImage(src){
+  const a = document.createElement("a");
+  a.href = src;
+  a.download = `EliteCompany-Badge-${state.memberId || "member"}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  toast("Badge downloaded 📥");
+}
+
+/* ================================================================
+   11. BADGE GENERATOR (Canvas)
+   ================================================================ */
+function rr(x, px, py, w, h, r){
+  x.beginPath();
+  x.moveTo(px + r, py);
+  x.arcTo(px + w, py,     px + w, py + h, r);
+  x.arcTo(px + w, py + h, px,     py + h, r);
+  x.arcTo(px,     py + h, px,     py,     r);
+  x.arcTo(px,     py,     px + w, py,     r);
+  x.closePath();
+}
+
+function glow(x, cx, cy, r, color){
+  const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0, color);
+  g.addColorStop(1, "transparent");
+  x.fillStyle = g;
+  x.fillRect(cx - r, cy - r, r * 2, r * 2);
+}
+
+function drawBadge({ name, planTitle, odds, memberId, validUntil }){
+  const W = 1200, H = 750, DPR = 2;
+  const c = document.createElement("canvas");
+  c.width  = W * DPR;
+  c.height = H * DPR;
+  const x = c.getContext("2d");
+  x.scale(DPR, DPR);
+
+  /* ---- background ---- */
+  const bg = x.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0,   "#050a10");
+  bg.addColorStop(0.5, "#0a1622");
+  bg.addColorStop(1,   "#0a1e17");
+  x.fillStyle = bg;
+  x.fillRect(0, 0, W, H);
+
+  /* ---- glows ---- */
+  glow(x, 140,  110, 430, "rgba(245,179,1,.20)");
+  glow(x, 1070, 660, 470, "rgba(34,197,94,.20)");
+
+  /* ---- dot grid ---- */
+  x.fillStyle = "rgba(255,255,255,.05)";
+  for (let i = 44; i < W; i += 36)
+    for (let j = 44; j < H; j += 36){
+      x.beginPath(); x.arc(i, j, 1.15, 0, Math.PI * 2); x.fill();
+    }
+
+  /* ---- borders ---- */
+  const border = x.createLinearGradient(0, 0, W, H);
+  border.addColorStop(0,   "#f5b301");
+  border.addColorStop(0.5, "#ffe58f");
+  border.addColorStop(1,   "#22c55e");
+  x.strokeStyle = border;
+  x.lineWidth = 3;
+  rr(x, 26, 26, W - 52, H - 52, 28); x.stroke();
+
+  x.strokeStyle = "rgba(255,255,255,.09)";
+  x.lineWidth = 1;
+  rr(x, 42, 42, W - 84, H - 84, 20); x.stroke();
+
+  /* ---- header ---- */
+  x.textAlign = "center";
+  x.textBaseline = "alphabetic";
+
+  x.fillStyle = "#f5b301";
+  x.font = "800 30px Inter, Segoe UI, Arial, sans-serif";
+  if ("letterSpacing" in x) x.letterSpacing = "9px";
+  x.fillText("ELITE COMPANY GROUP", W / 2 + 4, 118);
+  if ("letterSpacing" in x) x.letterSpacing = "0px";
+
+  x.fillStyle = "#8ba0b6";
+  x.font = "600 19px Inter, Segoe UI, Arial, sans-serif";
+  x.fillText("OFFICIAL MEMBERSHIP BADGE", W / 2, 154);
+
+  /* divider */
+  const div = x.createLinearGradient(340, 0, 860, 0);
+  div.addColorStop(0,   "transparent");
+  div.addColorStop(0.5, "rgba(245,179,1,.75)");
+  div.addColorStop(1,   "transparent");
+  x.strokeStyle = div;
+  x.lineWidth = 1.5;
+  x.beginPath(); x.moveTo(340, 186); x.lineTo(860, 186); x.stroke();
+
+  /* ---- member label ---- */
+  x.fillStyle = "#7f93a8";
+  x.font = "700 16px Inter, Segoe UI, Arial, sans-serif";
+  if ("letterSpacing" in x) x.letterSpacing = "6px";
+  x.fillText("MEMBER", W / 2, 254);
+  if ("letterSpacing" in x) x.letterSpacing = "0px";
+
+  /* ---- member name ---- */
+  const nameGrad = x.createLinearGradient(W / 2 - 320, 0, W / 2 + 320, 0);
+  nameGrad.addColorStop(0,   "#ffffff");
+  nameGrad.addColorStop(0.5, "#ffe9a8");
+  nameGrad.addColorStop(1,   "#ffffff");
+  x.fillStyle = nameGrad;
+  x.font = "800 62px Inter, Segoe UI, Arial, sans-serif";
+  x.shadowColor = "rgba(245,179,1,.45)";
+  x.shadowBlur = 26;
+  x.fillText(name, W / 2, 330);
+  x.shadowBlur = 0;
+
+  /* ---- plan pill ---- */
+  x.font = "700 26px Inter, Segoe UI, Arial, sans-serif";
+  const pillText = planTitle.toUpperCase();
+  const pillW = x.measureText(pillText).width + 68;
+  const pillH = 58;
+  const pillX = (W - pillW) / 2;
+  const pillY = 372;
+
+  const pillGrad = x.createLinearGradient(pillX, 0, pillX + pillW, 0);
+  pillGrad.addColorStop(0, "rgba(245,179,1,.20)");
+  pillGrad.addColorStop(1, "rgba(34,197,94,.20)");
+  x.fillStyle = pillGrad;
+  rr(x, pillX, pillY, pillW, pillH, pillH / 2); x.fill();
+  x.strokeStyle = "rgba(245,179,1,.55)";
+  x.lineWidth = 1.5;
+  rr(x, pillX, pillY, pillW, pillH, pillH / 2); x.stroke();
+
+  x.fillStyle = "#ffd76a";
+  x.textBaseline = "middle";
+  x.fillText(pillText, W / 2, pillY + pillH / 2 + 1);
+  x.textBaseline = "alphabetic";
+
+  /* ---- info columns ---- */
+  const cols = [
+    { label: "ODDS CATEGORY", value: odds },
+    { label: "MEMBER ID",     value: memberId },
+    { label: "VALID UNTIL",   value: validUntil }
+  ];
+  const colX = [W * 0.22, W * 0.5, W * 0.78];
+
+  cols.forEach((col, i) => {
+    x.fillStyle = "#7f93a8";
+    x.font = "700 14px Inter, Segoe UI, Arial, sans-serif";
+    if ("letterSpacing" in x) x.letterSpacing = "3px";
+    x.fillText(col.label, colX[i], 508);
+    if ("letterSpacing" in x) x.letterSpacing = "0px";
+
+    x.fillStyle = "#ffffff";
+    x.font = "700 23px Inter, Segoe UI, Arial, sans-serif";
+    x.fillText(col.value, colX[i], 546);
+  });
+
+  /* ---- footer ---- */
+  const fdiv = x.createLinearGradient(300, 0, 900, 0);
+  fdiv.addColorStop(0,   "transparent");
+  fdiv.addColorStop(0.5, "rgba(255,255,255,.14)");
+  fdiv.addColorStop(1,   "transparent");
+  x.strokeStyle = fdiv;
+  x.lineWidth = 1;
+  x.beginPath(); x.moveTo(300, 608); x.lineTo(900, 608); x.stroke();
+
+  /* verified seal */
+  x.beginPath();
+  x.arc(W / 2, 668, 30, 0, Math.PI * 2);
+  x.fillStyle = "rgba(34,197,94,.16)";
+  x.fill();
+  x.strokeStyle = "rgba(34,197,94,.75)";
+  x.lineWidth = 2;
+  x.stroke();
+
+  x.fillStyle = "#22c55e";
+  x.font = "800 26px Inter, Segoe UI, Arial, sans-serif";
+  x.fillText("✓", W / 2, 678);
+
+  x.fillStyle = "#8ba0b6";
+  x.font = "600 15px Inter, Segoe UI, Arial, sans-serif";
+  if ("letterSpacing" in x) x.letterSpacing = "2px";
+  x.fillText("VERIFIED MEMBER", W / 2, 722);
+  if ("letterSpacing" in x) x.letterSpacing = "0px";
+
+  return c.toDataURL("image/png");
+}
+
+/* ================================================================
+   12. CONFETTI ENGINE
+   ================================================================ */
+const confCanvas = $("#confetti");
+const cctx = confCanvas.getContext("2d");
+let particles = [], confRunning = false;
+
+function fitConfetti(){
+  confCanvas.width  = window.innerWidth;
+  confCanvas.height = window.innerHeight;
+}
+window.addEventListener("resize", fitConfetti);
+fitConfetti();
+
+function fireConfetti(){
+  const colors = ["#f5b301", "#22c55e", "#38bdf8", "#f472b6", "#ffffff", "#ffd76a"];
+  for (let i = 0; i < 190; i++){
+    particles.push({
+      x  : Math.random() * confCanvas.width,
+      y  : -30 - Math.random() * confCanvas.height * 0.5,
+      w  : 5 + Math.random() * 8,
+      h  : 8 + Math.random() * 10,
+      vx : -1.6 + Math.random() * 3.2,
+      vy : 2 + Math.random() * 4.2,
+      rot: Math.random() * Math.PI,
+      vr : -0.16 + Math.random() * 0.32,
+      color: colors[(Math.random() * colors.length) | 0]
+    });
+  }
+  if (!confRunning){ confRunning = true; requestAnimationFrame(stepConfetti); }
+}
+
+function stepConfetti(){
+  cctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+
+  particles = particles.filter(p => p.y < confCanvas.height + 60);
+
+  for (const p of particles){
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.035;
+    p.vx *= 0.998;
+    p.rot += p.vr;
+
+    cctx.save();
+    cctx.translate(p.x, p.y);
+    cctx.rotate(p.rot);
+    cctx.fillStyle = p.color;
+    cctx.globalAlpha = 0.95;
+    cctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    cctx.restore();
+  }
+
+  if (particles.length){
+    requestAnimationFrame(stepConfetti);
+  } else {
+    confRunning = false;
+    cctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+  }
+}
+
+/* ================================================================
+   13. RESET / BOOT
+   ================================================================ */
+function resetFlow(){
+  chat.innerHTML = "";
+  composerBar.innerHTML = "";
+  particles = [];
+  Object.assign(state, { plan:null, ref:null, txid:null, memberId:null, locked:false });
+  startConversation();
+}
+
+async function startConversation(){
+  renderNone();
+
+  await botSay(`🎉 WELCOME ${CONFIG.userName}! 🎉`, { delay: 420, speed: 34 });
+  await sleep(180);
+
+  await botSay(
+    `Welcome to the ${CONFIG.brand}. Your registration has been successfully completed.`,
+    { speed: 12 }
+  );
+  await sleep(140);
+
+  await botSay(`You can now choose your preferred odds category:`, { speed: 14 });
+
+  await showPlans();
+}
+
+$("#resetBtn").addEventListener("click", () => {
+  toast("Conversation restarted");
+  resetFlow();
+});
+
+/* Kick things off */
+startConversation();
+</script>
+</body>
+      </html>
