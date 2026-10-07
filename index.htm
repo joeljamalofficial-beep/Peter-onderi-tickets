@@ -905,4 +905,346 @@ async function verifyTx(value){
   await sleep(500);
 
   const t2 = showTyping();
-  await sleep
+  await sleep(900);
+  t2.remove();
+
+  await activateMembership();
+}
+
+/* ================================================================
+   10. FLOW — STEP 4: activate + badge
+   ================================================================ */
+async function activateMembership(){
+  const p = CONFIG.plans[state.plan];
+
+  state.memberId = `ECG-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const validUntil = new Date();
+  validUntil.setMonth(validUntil.getMonth() + 2);
+
+  await botSay(
+    `✅ Payment confirmed!\n\n` +
+    `🎉 Congratulations ${CONFIG.userName}! Your ${p.title} membership is now ACTIVE.\n\n` +
+    `Member ID: ${state.memberId}\n` +
+    `Valid until: ${fmtDate(validUntil)}`,
+    { speed: 11 }
+  );
+
+  await botSay(`Here is your official membership badge 👇`, { speed: 16 });
+
+  const badgeURL = drawBadge({
+    name       : CONFIG.userName,
+    planTitle  : p.title,
+    odds       : p.odds,
+    memberId   : state.memberId,
+    validUntil : fmtDate(validUntil)
+  });
+
+  const img = document.createElement("img");
+  img.className = "badge-img";
+  img.alt = "Membership badge";
+  img.src = badgeURL;
+  addNode(img, "bot");
+
+  fireConfetti();
+
+  await sleep(700);
+  await botSay(
+    `You've been added to the ${p.title} WhatsApp group ✅\n\n` +
+    `You will receive your ${p.odds} selections every day for the next ${CONFIG.duration}.\n\n` +
+    `Good luck! 🍀`,
+    { speed: 12 }
+  );
+
+  renderQuick([
+    { label: "📥 Download badge", primary: true, onClick: () => downloadImage(badgeURL) },
+    { label: "💬 Open WhatsApp group",            onClick: () => window.open(CONFIG.whatsapp, "_blank") },
+    { label: "🔄 Start over",                     onClick: resetFlow }
+  ]);
+}
+
+function downloadImage(src){
+  const a = document.createElement("a");
+  a.href = src;
+  a.download = `EliteCompany-Badge-${state.memberId || "member"}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  toast("Badge downloaded 📥");
+}
+
+/* ================================================================
+   11. BADGE GENERATOR (Canvas)
+   ================================================================ */
+function rr(x, px, py, w, h, r){
+  x.beginPath();
+  x.moveTo(px + r, py);
+  x.arcTo(px + w, py,     px + w, py + h, r);
+  x.arcTo(px + w, py + h, px,     py + h, r);
+  x.arcTo(px,     py + h, px,     py,     r);
+  x.arcTo(px,     py,     px + w, py,     r);
+  x.closePath();
+}
+
+function glow(x, cx, cy, r, color){
+  const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0, color);
+  g.addColorStop(1, "transparent");
+  x.fillStyle = g;
+  x.fillRect(cx - r, cy - r, r * 2, r * 2);
+}
+
+function drawBadge({ name, planTitle, odds, memberId, validUntil }){
+  const W = 1200, H = 750, DPR = 2;
+  const c = document.createElement("canvas");
+  c.width  = W * DPR;
+  c.height = H * DPR;
+  const x = c.getContext("2d");
+  x.scale(DPR, DPR);
+
+  /* ---- background ---- */
+  const bg = x.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0,   "#050a10");
+  bg.addColorStop(0.5, "#0a1622");
+  bg.addColorStop(1,   "#0a1e17");
+  x.fillStyle = bg;
+  x.fillRect(0, 0, W, H);
+
+  /* ---- glows ---- */
+  glow(x, 140,  110, 430, "rgba(245,179,1,.20)");
+  glow(x, 1070, 660, 470, "rgba(34,197,94,.20)");
+
+  /* ---- dot grid ---- */
+  x.fillStyle = "rgba(255,255,255,.05)";
+  for (let i = 44; i < W; i += 36)
+    for (let j = 44; j < H; j += 36){
+      x.beginPath(); x.arc(i, j, 1.15, 0, Math.PI * 2); x.fill();
+    }
+
+  /* ---- borders ---- */
+  const border = x.createLinearGradient(0, 0, W, H);
+  border.addColorStop(0,   "#f5b301");
+  border.addColorStop(0.5, "#ffe58f");
+  border.addColorStop(1,   "#22c55e");
+  x.strokeStyle = border;
+  x.lineWidth = 3;
+  rr(x, 26, 26, W - 52, H - 52, 28); x.stroke();
+
+  x.strokeStyle = "rgba(255,255,255,.09)";
+  x.lineWidth = 1;
+  rr(x, 42, 42, W - 84, H - 84, 20); x.stroke();
+
+  /* ---- header ---- */
+  x.textAlign = "center";
+  x.textBaseline = "alphabetic";
+
+  x.fillStyle = "#f5b301";
+  x.font = "800 30px Inter, Segoe UI, Arial, sans-serif";
+  if ("letterSpacing" in x) x.letterSpacing = "9px";
+  x.fillText("ELITE COMPANY GROUP", W / 2 + 4, 118);
+  if ("letterSpacing" in x) x.letterSpacing = "0px";
+
+  x.fillStyle = "#8ba0b6";
+  x.font = "600 19px Inter, Segoe UI, Arial, sans-serif";
+  x.fillText("OFFICIAL MEMBERSHIP BADGE", W / 2, 154);
+
+  /* divider */
+  const div = x.createLinearGradient(340, 0, 860, 0);
+  div.addColorStop(0,   "transparent");
+  div.addColorStop(0.5, "rgba(245,179,1,.75)");
+  div.addColorStop(1,   "transparent");
+  x.strokeStyle = div;
+  x.lineWidth = 1.5;
+  x.beginPath(); x.moveTo(340, 186); x.lineTo(860, 186); x.stroke();
+
+  /* ---- member label ---- */
+  x.fillStyle = "#7f93a8";
+  x.font = "700 16px Inter, Segoe UI, Arial, sans-serif";
+  if ("letterSpacing" in x) x.letterSpacing = "6px";
+  x.fillText("MEMBER", W / 2, 254);
+  if ("letterSpacing" in x) x.letterSpacing = "0px";
+
+  /* ---- member name ---- */
+  const nameGrad = x.createLinearGradient(W / 2 - 320, 0, W / 2 + 320, 0);
+  nameGrad.addColorStop(0,   "#ffffff");
+  nameGrad.addColorStop(0.5, "#ffe9a8");
+  nameGrad.addColorStop(1,   "#ffffff");
+  x.fillStyle = nameGrad;
+  x.font = "800 62px Inter, Segoe UI, Arial, sans-serif";
+  x.shadowColor = "rgba(245,179,1,.45)";
+  x.shadowBlur = 26;
+  x.fillText(name, W / 2, 330);
+  x.shadowBlur = 0;
+
+  /* ---- plan pill ---- */
+  x.font = "700 26px Inter, Segoe UI, Arial, sans-serif";
+  const pillText = planTitle.toUpperCase();
+  const pillW = x.measureText(pillText).width + 68;
+  const pillH = 58;
+  const pillX = (W - pillW) / 2;
+  const pillY = 372;
+
+  const pillGrad = x.createLinearGradient(pillX, 0, pillX + pillW, 0);
+  pillGrad.addColorStop(0, "rgba(245,179,1,.20)");
+  pillGrad.addColorStop(1, "rgba(34,197,94,.20)");
+  x.fillStyle = pillGrad;
+  rr(x, pillX, pillY, pillW, pillH, pillH / 2); x.fill();
+  x.strokeStyle = "rgba(245,179,1,.55)";
+  x.lineWidth = 1.5;
+  rr(x, pillX, pillY, pillW, pillH, pillH / 2); x.stroke();
+
+  x.fillStyle = "#ffd76a";
+  x.textBaseline = "middle";
+  x.fillText(pillText, W / 2, pillY + pillH / 2 + 1);
+  x.textBaseline = "alphabetic";
+
+  /* ---- info columns ---- */
+  const cols = [
+    { label: "ODDS CATEGORY", value: odds },
+    { label: "MEMBER ID",     value: memberId },
+    { label: "VALID UNTIL",   value: validUntil }
+  ];
+  const colX = [W * 0.22, W * 0.5, W * 0.78];
+
+  cols.forEach((col, i) => {
+    x.fillStyle = "#7f93a8";
+    x.font = "700 14px Inter, Segoe UI, Arial, sans-serif";
+    if ("letterSpacing" in x) x.letterSpacing = "3px";
+    x.fillText(col.label, colX[i], 508);
+    if ("letterSpacing" in x) x.letterSpacing = "0px";
+
+    x.fillStyle = "#ffffff";
+    x.font = "700 23px Inter, Segoe UI, Arial, sans-serif";
+    x.fillText(col.value, colX[i], 546);
+  });
+
+  /* ---- footer ---- */
+  const fdiv = x.createLinearGradient(300, 0, 900, 0);
+  fdiv.addColorStop(0,   "transparent");
+  fdiv.addColorStop(0.5, "rgba(255,255,255,.14)");
+  fdiv.addColorStop(1,   "transparent");
+  x.strokeStyle = fdiv;
+  x.lineWidth = 1;
+  x.beginPath(); x.moveTo(300, 608); x.lineTo(900, 608); x.stroke();
+
+  /* verified seal */
+  x.beginPath();
+  x.arc(W / 2, 668, 30, 0, Math.PI * 2);
+  x.fillStyle = "rgba(34,197,94,.16)";
+  x.fill();
+  x.strokeStyle = "rgba(34,197,94,.75)";
+  x.lineWidth = 2;
+  x.stroke();
+
+  x.fillStyle = "#22c55e";
+  x.font = "800 26px Inter, Segoe UI, Arial, sans-serif";
+  x.fillText("✓", W / 2, 678);
+
+  x.fillStyle = "#8ba0b6";
+  x.font = "600 15px Inter, Segoe UI, Arial, sans-serif";
+  if ("letterSpacing" in x) x.letterSpacing = "2px";
+  x.fillText("VERIFIED MEMBER", W / 2, 722);
+  if ("letterSpacing" in x) x.letterSpacing = "0px";
+
+  return c.toDataURL("image/png");
+}
+
+/* ================================================================
+   12. CONFETTI ENGINE
+   ================================================================ */
+const confCanvas = $("#confetti");
+const cctx = confCanvas.getContext("2d");
+let particles = [], confRunning = false;
+
+function fitConfetti(){
+  confCanvas.width  = window.innerWidth;
+  confCanvas.height = window.innerHeight;
+}
+window.addEventListener("resize", fitConfetti);
+fitConfetti();
+
+function fireConfetti(){
+  const colors = ["#f5b301", "#22c55e", "#38bdf8", "#f472b6", "#ffffff", "#ffd76a"];
+  for (let i = 0; i < 190; i++){
+    particles.push({
+      x  : Math.random() * confCanvas.width,
+      y  : -30 - Math.random() * confCanvas.height * 0.5,
+      w  : 5 + Math.random() * 8,
+      h  : 8 + Math.random() * 10,
+      vx : -1.6 + Math.random() * 3.2,
+      vy : 2 + Math.random() * 4.2,
+      rot: Math.random() * Math.PI,
+      vr : -0.16 + Math.random() * 0.32,
+      color: colors[(Math.random() * colors.length) | 0]
+    });
+  }
+  if (!confRunning){ confRunning = true; requestAnimationFrame(stepConfetti); }
+}
+
+function stepConfetti(){
+  cctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+
+  particles = particles.filter(p => p.y < confCanvas.height + 60);
+
+  for (const p of particles){
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.035;
+    p.vx *= 0.998;
+    p.rot += p.vr;
+
+    cctx.save();
+    cctx.translate(p.x, p.y);
+    cctx.rotate(p.rot);
+    cctx.fillStyle = p.color;
+    cctx.globalAlpha = 0.95;
+    cctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    cctx.restore();
+  }
+
+  if (particles.length){
+    requestAnimationFrame(stepConfetti);
+  } else {
+    confRunning = false;
+    cctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+  }
+}
+
+/* ================================================================
+   13. RESET / BOOT
+   ================================================================ */
+function resetFlow(){
+  chat.innerHTML = "";
+  composerBar.innerHTML = "";
+  particles = [];
+  Object.assign(state, { plan:null, ref:null, txid:null, memberId:null, locked:false });
+  startConversation();
+}
+
+async function startConversation(){
+  renderNone();
+
+  await botSay(`🎉 WELCOME ${CONFIG.userName}! 🎉`, { delay: 420, speed: 34 });
+  await sleep(180);
+
+  await botSay(
+    `Welcome to the ${CONFIG.brand}. Your registration has been successfully completed.`,
+    { speed: 12 }
+  );
+  await sleep(140);
+
+  await botSay(`You can now choose your preferred odds category:`, { speed: 14 });
+
+  await showPlans();
+}
+
+$("#resetBtn").addEventListener("click", () => {
+  toast("Conversation restarted");
+  resetFlow();
+});
+
+/* Kick things off */
+startConversation();
+</script>
+</body>
+</html>
